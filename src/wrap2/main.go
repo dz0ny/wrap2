@@ -25,7 +25,6 @@ func (writer logWriter) Write(bytes []byte) (int, error) {
 
 var wrapCommand string
 var wrapCommand2 string
-var syslogBind string
 var wg sync.WaitGroup
 
 func init() {
@@ -33,7 +32,6 @@ func init() {
 	log.SetOutput(new(logWriter))
 	flag.StringVar(&wrapCommand, "cmd", "", "Command to wrap")
 	flag.StringVar(&wrapCommand2, "cmd2", "", "Command to wrap")
-	flag.StringVar(&syslogBind, "syslog", "127.0.0.1:514", "Address of internal syslog UDP server")
 }
 
 func runCmd(ctx context.Context, cancel context.CancelFunc, cmd string) {
@@ -82,17 +80,17 @@ func runCmd(ctx context.Context, cancel context.CancelFunc, cmd string) {
 }
 
 func signalProcessWithTimeout(process *exec.Cmd, sig os.Signal) {
-	done := make(chan struct{})
-
+	done := make(chan bool)
 	go func() {
-		process.Process.Signal(sig) // pretty sure this doesn't do anything. It seems like the signal is automatically sent to the command?
+		process.Process.Signal(syscall.SIGINT)
+		process.Process.Signal(syscall.SIGTERM)
 		process.Wait()
 		close(done)
 	}()
 	select {
 	case <-done:
 		return
-	case <-time.After(10 * time.Second):
+	case <-time.After(5 * time.Second):
 		log.Println("Killing command due to timeout.")
 		process.Process.Kill()
 	}
@@ -109,11 +107,12 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	channel := make(syslog.LogPartsChannel)
 	syslogServer := syslog.NewServer()
-	syslogServer.SetFormat(syslog.RFC3164)
+	syslogServer.SetFormat(syslog.RFC5424)
 	syslogServer.SetHandler(syslog.NewChannelHandler(channel))
-	syslogServer.ListenUDP(syslogBind)
+	syslogServer.ListenUDP("0.0.0.0:514")
+	syslogServer.ListenTCP("0.0.0.0:514")
 	syslogServer.Boot()
-	log.Println("Syslog server started on UDP:", syslogBind)
+	log.Println("Syslog server started")
 	go parseSyslog(channel)
 	go runCmd(ctx, cancel, wrapCommand)
 	go runCmd(ctx, cancel, wrapCommand2)
