@@ -2,20 +2,57 @@
 
 
 [[projects]]
-  name = "gopkg.in/mcuadros/go-syslog.v2"
+  name = "github.com/davecgh/go-spew"
+  packages = ["spew"]
+  revision = "346938d642f2ec3594ed81d874461961cd0faa76"
+  version = "v1.1.0"
+
+[[projects]]
+  name = "github.com/pelletier/go-toml"
+  packages = ["."]
+  revision = "acdc4509485b587f5e675510c4f2c63e90ff68a8"
+  version = "v1.1.0"
+
+[[projects]]
+  name = "github.com/pmezard/go-difflib"
+  packages = ["difflib"]
+  revision = "792786c7400a136282c1664665ae0a8db921c6c2"
+  version = "v1.0.0"
+
+[[projects]]
+  name = "github.com/stretchr/testify"
+  packages = ["assert"]
+  revision = "12b6f73e6084dad08a7c6e575284b177ecafbc71"
+  version = "v1.2.1"
+
+[[projects]]
+  name = "go.uber.org/atomic"
+  packages = ["."]
+  revision = "1ea20fb1cbb1cc08cbd0d913a96dead89aa18289"
+  version = "v1.3.2"
+
+[[projects]]
+  name = "go.uber.org/multierr"
+  packages = ["."]
+  revision = "3c4937480c32f4c13a875a1829af76c98ca3d40a"
+  version = "v1.1.0"
+
+[[projects]]
+  name = "go.uber.org/zap"
   packages = [
     ".",
-    "format",
-    "internal/syslogparser",
-    "internal/syslogparser/rfc3164",
-    "internal/syslogparser/rfc5424"
+    "buffer",
+    "internal/bufferpool",
+    "internal/color",
+    "internal/exit",
+    "zapcore"
   ]
-  revision = "9cf13b7327c0e153da3cba3540c2ae2b879c3859"
-  version = "v2.2.1"
+  revision = "eeedf312bc6c57391d84767a4cd413f02a917974"
+  version = "v1.8.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "45c4be1ada74907b059c933e70b7ded7ee22e371cfb75007dcf7e9c8e0dd763b"
+  inputs-digest = "32aff21c954862f6a2f91e9e516c0395c526035f419ad00883ce2d6792ae9e9e"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -27,6 +27,7 @@ pkg
 src/wrap2/vendor
 src/github.com
 src/golang.org
+src/go.uber.org
 src/gopkg.in
 src/sourcegraph.com
 wrap2-*-*

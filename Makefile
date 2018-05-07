@@ -44,7 +44,7 @@ install: build
 #
 # Install locked dependecies
 #
-sync: bin/dep
+ensure: bin/dep
 	cd src/$(PKG); dep ensure
 
 #
@@ -66,8 +66,8 @@ bin/gometalinter:
 	go get -u github.com/alecthomas/gometalinter
 	bin/gometalinter --install --update
 
-deps:
-	go get -t $(PKG)/... # install test packages
+bin/go-ls:
+	go get github.com/laher/gols/cmd/go-ls
 
 clean:
 	rm -f $(PKG)
@@ -80,7 +80,7 @@ lint: bin/gometalinter
 	bin/gometalinter --fast --disable=gotype --disable=gosimple --disable=ineffassign --disable=dupl --disable=gas --cyclo-over=30 --deadline=60s --exclude $(shell pwd)/src/$(PKG)/vendor src/$(PKG)/...
 	find src/$(PKG) -not -path "./src/$(PKG)/vendor/*" -name '*.go' | xargs gofmt -w -s
 
-test: deps lint cover
+test: bin/go-ls lint cover
 	go test -v -race $(shell go-ls $(PKG)/...)
 
 cover: bin/gocov
@@ -89,4 +89,4 @@ cover: bin/gocov
 upload: bin/github-release
 	$(call ghupload,Linux-x86_64)
 
-all: deps sync build
+all: ensure build test
