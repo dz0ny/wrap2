@@ -14,7 +14,7 @@ import (
 // Template holds information about processing
 type Template struct {
 	Source  string            `toml:"src"`
-	Target  string            `toml:"dest"`
+	Target  string            `toml:"dst"`
 	Context map[string]string `toml:"data, omitempty"`
 }
 

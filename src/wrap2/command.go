@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"io"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -23,8 +22,9 @@ func (c *Command) Run(ctx context.Context, cancel context.CancelFunc) {
 	defer wg.Done()
 	args := strings.Split(c.Command, " ")
 	process := exec.Command(args[0], args[1:]...)
-	go io.Copy(process.Stdout, os.Stdout)
-	go io.Copy(process.Stderr, os.Stderr)
+	process.Stdout = os.Stdout
+	process.Stderr = os.Stderr
+	process.Stdin = os.Stdin
 
 	// start the process
 	err := process.Start()

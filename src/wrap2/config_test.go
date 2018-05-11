@@ -12,7 +12,7 @@ var out = `
   cmd = "nginx -V -E"
   [process.config]
     src = "source.tmpl"
-    out = "target.tmpl"
+    dst = "target.tmpl"
 		[process.config.data]
 			domain = "test.tld"
 
@@ -20,7 +20,7 @@ var out = `
   cmd = "php -v"
   [process.config]
     src = "source.tmpl"
-    out = "target.tmpl"
+    dst = "target.tmpl"
 
 [[process]]
   cmd = "true -v"
@@ -57,6 +57,8 @@ func TestDefaultConfig(t *testing.T) {
 
 	out, err := toml.Marshal(c)
 	assert.NoError(t, err)
+	assert.Contains(t, string(out), `src = "source.tmpl"`)
+	assert.Contains(t, string(out), `dst = "target.tmpl"`)
 	assert.Contains(t, string(out), `cmd = "nginx -V -E"`)
 	assert.Contains(t, string(out), `cmd = "php -v"`)
 	assert.Contains(t, string(out), `[process.config]`)
