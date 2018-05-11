@@ -4,11 +4,9 @@ import (
 	"context"
 	"flag"
 	"os"
-	"os/exec"
 	"os/signal"
 	"sync"
 	"syscall"
-	"time"
 
 	"go.uber.org/zap"
 )
@@ -21,26 +19,6 @@ func init() {
 	log, _ = zap.NewProduction()
 	defer log.Sync()
 	flag.StringVar(&configLocation, "config", "/provision/init.toml", "Location of the init file")
-}
-
-func signalProcessWithTimeout(process *exec.Cmd, sig os.Signal) {
-	done := make(chan bool)
-	go func() {
-		process.Process.Signal(syscall.SIGINT)
-		process.Process.Signal(syscall.SIGTERM)
-		process.Wait()
-		close(done)
-	}()
-	select {
-	case <-done:
-		return
-	case <-time.After(5 * time.Second):
-		log.Info(
-			"Command termianted due to timeout",
-			zap.String("cmd", process.Path),
-		)
-		process.Process.Kill()
-	}
 }
 
 func main() {
@@ -61,6 +39,11 @@ func main() {
 	}
 
 	for _, proc := range config.Process {
+		log.Info(
+			"Parsing",
+			zap.String("src", proc.Template.Source),
+			zap.String("dst", proc.Template.Target),
+		)
 		if err := proc.Template.Process(); err != nil {
 			log.Fatal(
 				"template parsing failed",
@@ -69,8 +52,7 @@ func main() {
 				zap.Error(err),
 			)
 		}
-
-		go proc.Run(ctx, cancel)
+		proc.Run(ctx, cancel)
 	}
 
 	// Handle SIGINT and SIGTERM.
