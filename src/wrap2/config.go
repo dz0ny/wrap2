@@ -10,7 +10,8 @@ import (
 
 // Config is top level init configuration holder
 type Config struct {
-	Process []Command `toml:"process"`
+	PreStart Command   `toml:"pre_start, omitempty"`
+	Process  []Command `toml:"process"`
 }
 
 // NewConfig returns Config instance for provided file

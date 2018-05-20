@@ -27,6 +27,9 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	config := NewConfig(configLocation)
+	if config.PreStart.Command != "" {
+		config.PreStart.RunBlocking()
+	}
 
 	for _, proc := range config.Process {
 		if err := proc.Template.Process(); err != nil {

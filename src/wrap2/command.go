@@ -18,6 +18,22 @@ type Command struct {
 	Template Template `toml:"config, omitempty"`
 }
 
+// RunBlocking runs command in blocking mode
+func (c *Command) RunBlocking() {
+	args := strings.Split(c.Command, " ")
+	process := exec.Command(args[0], args[1:]...)
+	process.Stdout = os.Stdout
+	process.Stderr = os.Stderr
+	process.Stdin = os.Stdin
+	log.Info("Starting pre_start", zap.Strings("args", args))
+	_, err := process.CombinedOutput()
+	log.Fatal(
+		"Failed starting command",
+		zap.String("cmd", c.Command),
+		zap.Error(err),
+	)
+}
+
 // Run executes process and redirects pipes
 func (c *Command) Run(ctx context.Context, cancel context.CancelFunc) {
 	go func(command string) {

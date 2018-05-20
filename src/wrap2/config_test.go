@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"testing"
 
 	toml "github.com/pelletier/go-toml"
@@ -28,6 +29,13 @@ var out = `
 
 func TestDefaultConfig(t *testing.T) {
 	c := Config{
+		PreStart: Command{
+			Command: "/bin/bash /provision/bin/initialize",
+			Template: Template{
+				Source: "source.tmpl",
+				Target: "target.tmpl",
+			},
+		},
 		Process: []Command{
 			{
 				Command: "nginx -V -E",
@@ -56,10 +64,12 @@ func TestDefaultConfig(t *testing.T) {
 	assert.NoError(t, err)
 
 	out, err := toml.Marshal(c)
+	fmt.Println(string(out))
 	assert.NoError(t, err)
 	assert.Contains(t, string(out), `src = "source.tmpl"`)
 	assert.Contains(t, string(out), `dst = "target.tmpl"`)
 	assert.Contains(t, string(out), `cmd = "nginx -V -E"`)
 	assert.Contains(t, string(out), `cmd = "php -v"`)
 	assert.Contains(t, string(out), `[process.config]`)
+	assert.Contains(t, string(out), `[pre_start]`)
 }

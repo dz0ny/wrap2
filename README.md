@@ -34,6 +34,9 @@ Secret var example {{k8s "secret"}}
 ## Configuration
 
 ```toml
+[pre_start]
+  cmd = "/bin/bash /provision/bin/initialize"
+
 [[process]]
   cmd = "nginx -V -E"
   [process.config]
