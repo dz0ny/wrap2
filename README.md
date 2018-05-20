@@ -36,9 +36,11 @@ Secret var example {{k8s "secret"}}
 ```toml
 [pre_start]
   cmd = "/bin/bash /provision/bin/initialize"
+  user = "dz0ny"
 
 [[process]]
   cmd = "nginx -V -E"
+  user = "www-data"
   [process.config]
     src = "source.tmpl"
     out = "target.tmpl"
@@ -47,6 +49,7 @@ Secret var example {{k8s "secret"}}
 
 [[process]]
   cmd = "php -v"
+  user = "www-data"
   [process.config]
     src = "source.tmpl"
     out = "target.tmpl"

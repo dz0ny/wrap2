@@ -38,7 +38,7 @@ func (t *Template) Process() error {
 			log.Fatal("unable to open", zap.String("src", t.Source), zap.Error(err))
 		}
 	} else {
-		return errors.New("`src` is empty")
+		return nil
 	}
 
 	data, err := ioutil.ReadFile(t.Source)

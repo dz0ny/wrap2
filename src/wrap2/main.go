@@ -42,18 +42,20 @@ func main() {
 	}
 
 	for _, proc := range config.Process {
-		log.Info(
-			"Parsing",
-			zap.String("src", proc.Template.Source),
-			zap.String("dst", proc.Template.Target),
-		)
-		if err := proc.Template.Process(); err != nil {
-			log.Fatal(
-				"template parsing failed",
+		if proc.Template.Source != "" && proc.Template.Target != "" {
+			log.Info(
+				"Parsing",
 				zap.String("src", proc.Template.Source),
 				zap.String("dst", proc.Template.Target),
-				zap.Error(err),
 			)
+			if err := proc.Template.Process(); err != nil {
+				log.Fatal(
+					"template parsing failed",
+					zap.String("src", proc.Template.Source),
+					zap.String("dst", proc.Template.Target),
+					zap.Error(err),
+				)
+			}
 		}
 		proc.Run(ctx, cancel)
 	}
