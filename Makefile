@@ -1,4 +1,4 @@
-VERSION := 0.0.8
+VERSION := 0.0.9
 PKG := wrap2
 COMMIT := $(shell git rev-parse HEAD)
 BUILD_TIME := $(shell date -u +%FT%T)

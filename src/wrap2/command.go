@@ -59,13 +59,24 @@ func (c *Command) RunBlocking() {
 
 	process.SysProcAttr = &syscall.SysProcAttr{}
 	process.SysProcAttr.Credential = &syscall.Credential{Uid: uint32(c.uid), Gid: uint32(c.gid)}
-
+	process.Stdout = os.Stdout
+	process.Stderr = os.Stderr
 	process.Stdin = os.Stdin
 	log.Info("Starting", zap.Strings("args", args), zap.String("user", c.user))
-	_, err := process.CombinedOutput()
+	process.Start()
+	err := process.Start()
+	if err != nil {
+		log.Error(
+			"Failed starting command",
+			zap.String("cmd", c.Command),
+			zap.Error(err),
+		)
+	}
+
+	err = process.Wait()
 	if err != nil {
 		log.Fatal(
-			"Failed starting command",
+			"Failed waiting for command to finish",
 			zap.String("cmd", c.Command),
 			zap.Error(err),
 		)
