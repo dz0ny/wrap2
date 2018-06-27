@@ -60,6 +60,10 @@ func main() {
 		proc.Run(ctx, cancel)
 	}
 
+	if config.PostStart.Command != "" {
+		config.PostStart.RunBlocking()
+	}
+
 	// Handle SIGINT and SIGTERM.
 	ch := make(chan os.Signal)
 	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)

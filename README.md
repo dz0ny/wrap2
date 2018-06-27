@@ -35,7 +35,10 @@ Secret var example {{k8s "secret"}}
 
 ```toml
 [pre_start]
-  cmd = "/bin/bash /provision/bin/initialize"
+  cmd = "/bin/bash /pre_start"
+  user = "dz0ny"
+[post_start]
+  cmd = "/bin/bash /post_start"
   user = "dz0ny"
 
 [[process]]

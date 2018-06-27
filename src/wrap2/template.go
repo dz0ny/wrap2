@@ -1,8 +1,11 @@
 package main
 
 import (
+	"crypto/sha1"
 	"errors"
+	"fmt"
 	"html/template"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -31,6 +34,12 @@ func secret(name string) string {
 	return string(data)
 }
 
+func sha(value string) string {
+	h := sha1.New()
+	io.WriteString(h, value)
+	return fmt.Sprintf("%x", h.Sum(nil))
+}
+
 // Process creates out file from src template
 func (t *Template) Process() error {
 	if t.Source != "" {
@@ -51,6 +60,7 @@ func (t *Template) Process() error {
 		"upper":   strings.ToUpper,
 		"env":     os.Getenv,
 		"k8s":     secret,
+		"sha1":    sha,
 	}).Parse(string(data))
 
 	if err != nil {

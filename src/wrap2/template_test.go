@@ -22,3 +22,8 @@ func TestDefaultTemplate(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, string(data), tmpl)
 }
+
+func TestHelpers(t *testing.T) {
+	h := sha("test")
+	assert.Equal(t, h, "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3")
+}

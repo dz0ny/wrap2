@@ -1,0 +1,11 @@
+[pre_start]
+  cmd = "sleep 20"
+  user = "www-data"
+
+[[process]]
+  cmd = "sleep 6"
+  user = "www-data"
+
+[[process]]
+  cmd = "sleep 3"
+  user = "dz0ny"
