@@ -11,7 +11,7 @@ import (
 // Config is top level init configuration holder
 type Config struct {
 	PreStart  Command   `toml:"pre_start, omitempty"`
-	PostStart Command   `toml:"pre_start, omitempty"`
+	PostStart Command   `toml:"post_start, omitempty"`
 	Process   []Command `toml:"process"`
 }
 
