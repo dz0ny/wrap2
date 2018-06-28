@@ -63,7 +63,7 @@ func (c *Command) RunBlocking() {
 	process.Stderr = os.Stderr
 	process.Stdin = os.Stdin
 	log.Info("Starting", zap.Strings("args", args), zap.String("user", c.user))
-	process.Start()
+
 	err := process.Start()
 	if err != nil {
 		log.Error(

@@ -1,4 +1,4 @@
-VERSION := 0.1.0
+VERSION := 0.1.1
 PKG := wrap2
 COMMIT := $(shell git rev-parse HEAD)
 BUILD_TIME := $(shell date -u +%FT%T)
@@ -90,3 +90,12 @@ upload: bin/github-release
 	$(call ghupload,Linux-x86_64)
 
 all: ensure build test
+
+release:
+	git stash
+	git fetch -p
+	git checkout master
+	git pull -r
+	git tag v$(VERSION)
+	git push origin v$(VERSION)
+	git pull -r
