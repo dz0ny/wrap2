@@ -5,5 +5,9 @@ go:
     - "1.10.1"
 script:
 - ".travis/make all"
-after_success:
-- ".travis/make upload"
+deploy:
+  - provider: script
+    skip_cleanup: true
+    script: ".travis/make build upload"
+    on:
+      tags: true
