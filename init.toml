@@ -13,3 +13,9 @@
 [post_start]
   cmd = "sleep 20"
   user = "www-data"
+
+[[cron]]
+  schedule = "@every 5s"
+  [cron.job]
+    cmd = "echo tick"
+    user = "www-data"

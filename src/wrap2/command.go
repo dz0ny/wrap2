@@ -24,10 +24,26 @@ type Command struct {
 	user     string
 }
 
+type logger struct {
+	Kind    string
+	Command string
+}
+
+func (l logger) Write(data []byte) (int, error) {
+
+	log.Info(
+		string(data),
+		zap.String("kind", l.Kind),
+		zap.String("cmd", l.Command),
+	)
+	return len(data), nil
+}
+
 // RunBlocking runs command in blocking mode
 func (c *Command) RunBlocking() {
 	args := strings.Split(c.Command, " ")
 	process := exec.Command(args[0], args[1:]...)
+	process.SysProcAttr = &syscall.SysProcAttr{}
 
 	if c.RunAs != "" {
 		currentUser, err := user.Lookup(c.RunAs)
@@ -42,31 +58,17 @@ func (c *Command) RunBlocking() {
 		c.user = currentUser.Username
 		c.uid, _ = strconv.Atoi(currentUser.Uid)
 		c.gid, _ = strconv.Atoi(currentUser.Gid)
-	} else {
-		currentUser, err := user.Current()
-		if err != nil {
-			log.Fatal(
-				"Failed getting user",
-				zap.String("run_as", c.RunAs),
-				zap.String("cmd", c.Command),
-				zap.Error(err),
-			)
-		}
-		c.user = currentUser.Username
-		c.uid, _ = strconv.Atoi(currentUser.Uid)
-		c.gid, _ = strconv.Atoi(currentUser.Gid)
+		process.SysProcAttr.Credential = &syscall.Credential{Uid: uint32(c.uid), Gid: uint32(c.gid)}
 	}
 
-	process.SysProcAttr = &syscall.SysProcAttr{}
-	process.SysProcAttr.Credential = &syscall.Credential{Uid: uint32(c.uid), Gid: uint32(c.gid)}
-	process.Stdout = os.Stdout
-	process.Stderr = os.Stderr
-	process.Stdin = os.Stdin
+	process.Stdout = logger{"stdout", c.Command}
+	process.Stderr = logger{"stderr", c.Command}
+	process.Stdin = nil
 	log.Info("Starting", zap.Strings("args", args), zap.String("user", c.user))
 
 	err := process.Start()
 	if err != nil {
-		log.Error(
+		log.Fatal(
 			"Failed starting command",
 			zap.String("cmd", c.Command),
 			zap.Error(err),
@@ -89,6 +91,8 @@ func (c *Command) Run(ctx context.Context, cancel context.CancelFunc) {
 		defer wg.Done()
 		args := strings.Split(command, " ")
 		process := exec.Command(args[0], args[1:]...)
+		process.SysProcAttr = &syscall.SysProcAttr{}
+
 		if runAs != "" {
 			currentUser, err := user.Lookup(runAs)
 			if err != nil {
@@ -102,26 +106,12 @@ func (c *Command) Run(ctx context.Context, cancel context.CancelFunc) {
 			c.user = currentUser.Username
 			c.uid, _ = strconv.Atoi(currentUser.Uid)
 			c.gid, _ = strconv.Atoi(currentUser.Gid)
-		} else {
-			currentUser, err := user.Current()
-			if err != nil {
-				log.Fatal(
-					"Failed getting user",
-					zap.String("run_as", c.RunAs),
-					zap.String("cmd", c.Command),
-					zap.Error(err),
-				)
-			}
-			c.user = currentUser.Username
-			c.uid, _ = strconv.Atoi(currentUser.Uid)
-			c.gid, _ = strconv.Atoi(currentUser.Gid)
+			process.SysProcAttr.Credential = &syscall.Credential{Uid: uint32(c.uid), Gid: uint32(c.gid)}
 		}
 
-		process.SysProcAttr = &syscall.SysProcAttr{}
-		process.SysProcAttr.Credential = &syscall.Credential{Uid: uint32(c.uid), Gid: uint32(c.gid)}
-		process.Stdout = os.Stdout
-		process.Stderr = os.Stderr
-		process.Stdin = os.Stdin
+		process.Stdout = logger{"stdout", c.Command}
+		process.Stderr = logger{"stderr", c.Command}
+		process.Stdin = nil
 		log.Info("Starting", zap.Strings("args", args), zap.String("user", c.user))
 
 		// start the process

@@ -13,6 +13,7 @@ type Config struct {
 	PreStart  Command   `toml:"pre_start, omitempty"`
 	PostStart Command   `toml:"post_start, omitempty"`
 	Process   []Command `toml:"process"`
+	Cron      []Cron    `toml:"cron"`
 }
 
 // NewConfig returns Config instance for provided file

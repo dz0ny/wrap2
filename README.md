@@ -8,6 +8,7 @@ It supports:
 - Template generation from environ and secrets
 - Managing multiple processes from single declaration file
 - PID1 handling of system events
+- Cron jobs
 
 
 ## Template
@@ -18,6 +19,21 @@ Extra functions:
 
  - `env` > gets value from environment
  - `k8s` > load value from secret Kubernetes volume mount
+
+## CRON
+
+Based of https://godoc.org/github.com/robfig/cron:
+
+Predefined schedules:
+```
+Entry                  | Description                                | Equivalent To
+-----                  | -----------                                | -------------
+@yearly (or @annually) | Run once a year, midnight, Jan. 1st        | 0 0 0 1 1 *
+@monthly               | Run once a month, midnight, first of month | 0 0 0 1 * *
+@weekly                | Run once a week, midnight between Sat/Sun  | 0 0 0 * * 0
+@daily (or @midnight)  | Run once a day, midnight                   | 0 0 0 * * *
+@hourly                | Run once an hour, beginning of hour        | 0 0 * * * *
+```
 
 ### Example:
 
@@ -59,6 +75,12 @@ Secret var example {{k8s "secret"}}
 
 [[process]]
   cmd = "true -v"
+
+[[cron]]
+  schedule = "@every 5s"
+  [cron.job]
+    cmd = "echo tick"
+    user = "www-data"
 ```
 
 ## Usage

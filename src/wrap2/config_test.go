@@ -36,6 +36,13 @@ func TestDefaultConfig(t *testing.T) {
 				Target: "target.tmpl",
 			},
 		},
+		Cron: []Cron{
+			{
+				Command: Command{
+					Command: "echo tick",
+				},
+				Schedule: "@every 5s",
+			}},
 		Process: []Command{
 			{
 				Command: "nginx -V -E",
@@ -72,4 +79,5 @@ func TestDefaultConfig(t *testing.T) {
 	assert.Contains(t, string(out), `cmd = "php -v"`)
 	assert.Contains(t, string(out), `[process.config]`)
 	assert.Contains(t, string(out), `[pre_start]`)
+	assert.Contains(t, string(out), `[cron.job]`)
 }
