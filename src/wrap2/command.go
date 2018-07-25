@@ -31,6 +31,12 @@ type logger struct {
 
 func (l logger) Write(data []byte) (int, error) {
 
+	// if we got json data just write it out
+	if string(data[0]) == "{" {
+		return os.Stdout.Write(data)
+	}
+
+	// wrap in json otherwise
 	log.Info(
 		string(data),
 		zap.String("kind", l.Kind),

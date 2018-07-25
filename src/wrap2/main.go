@@ -20,7 +20,7 @@ var wg sync.WaitGroup
 var log *zap.Logger
 
 func init() {
-	log, _ = zap.NewProduction()
+	log = zap.NewExample()
 	defer log.Sync()
 	flag.StringVar(&configLocation, "config", "/provision/init.toml", "Location of the init file")
 	flag.BoolVar(&showVersion, "version", false, "Show build time and version")
