@@ -1,4 +1,4 @@
-VERSION := 0.1.4
+VERSION := 1.2.0
 PKG := wrap2
 COMMIT := $(shell git rev-parse HEAD)
 BUILD_TIME := $(shell date -u +%FT%T)
@@ -62,9 +62,8 @@ bin/github-release:
 bin/gocov:
 	go get -u github.com/axw/gocov/gocov
 
-bin/gometalinter:
-	go get -u github.com/alecthomas/gometalinter
-	bin/gometalinter --install --update
+bin/golangci-lint:
+	go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
 
 bin/go-ls:
 	go get github.com/laher/gols/cmd/go-ls
@@ -75,9 +74,9 @@ clean:
 	rm -rf bin
 	find src/* -maxdepth 0 ! -name '$(PKG)' -type d | xargs rm -rf
 	rm -rf src/$(PKG)/vendor/
-	 
-lint: bin/gometalinter
-	bin/gometalinter --fast --disable=gotype --disable=gosimple --disable=ineffassign --disable=dupl --disable=gas --cyclo-over=30 --deadline=60s --exclude $(shell pwd)/src/$(PKG)/vendor src/$(PKG)/...
+
+lint: bin/golangci-lint
+	bin/golangci-lint run src/$(PKG)/...
 	find src/$(PKG) -not -path "./src/$(PKG)/vendor/*" -name '*.go' | xargs gofmt -w -s
 
 test: bin/go-ls lint cover
@@ -90,6 +89,10 @@ upload: bin/github-release
 	$(call ghupload,Linux-x86_64)
 
 all: ensure build test
+
+
+run:
+	./wrap2-Linux-x86_64 --config=init.toml --logger=log.sock
 
 release:
 	git stash

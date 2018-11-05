@@ -36,7 +36,9 @@ func secret(name string) string {
 
 func sha(value string) string {
 	h := sha1.New()
-	io.WriteString(h, value)
+	if _, err := io.WriteString(h, value); err != nil {
+		log.Fatal("Hashing failed", zap.Error(err))
+	}
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 

@@ -15,14 +15,15 @@ import (
 )
 
 var configLocation string
+var loggerLocation string
 var showVersion bool
 var wg sync.WaitGroup
 var log *zap.Logger
 
 func init() {
 	log = zap.NewExample()
-	defer log.Sync()
 	flag.StringVar(&configLocation, "config", "/provision/init.toml", "Location of the init file")
+	flag.StringVar(&loggerLocation, "logger", "/var/www/mu-plugins/logger.sock", "Location of logger socket")
 	flag.BoolVar(&showVersion, "version", false, "Show build time and version")
 }
 
@@ -49,7 +50,9 @@ func main() {
 			zap.String("cmd", cj.Command.Command),
 			zap.String("schedule", cj.Schedule),
 		)
-		cronRunner.AddFunc(cj.Schedule, cj.RunBlocking)
+		if err := cronRunner.AddFunc(cj.Schedule, cj.RunBlocking); err != nil {
+			log.Fatal("Adding cron entry failed", zap.Error(err))
+		}
 	}
 	cronRunner.Start()
 
@@ -86,8 +89,11 @@ func main() {
 		config.PostStart.RunBlocking()
 	}
 
+	unixlog := NewUnixLogger(loggerLocation)
+	go unixlog.Serve()
+
 	// Handle SIGINT and SIGTERM.
-	ch := make(chan os.Signal)
+	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
 	<-ch //block
 

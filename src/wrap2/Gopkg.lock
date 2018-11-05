@@ -2,48 +2,63 @@
 
 
 [[projects]]
+  digest = "1:a2c1d0e43bd3baaa071d1b9ed72c27d78169b2b269f71c105ac4ba34b1be4a39"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
+  pruneopts = "UT"
   revision = "346938d642f2ec3594ed81d874461961cd0faa76"
   version = "v1.1.0"
 
 [[projects]]
+  digest = "1:7231124c9669dfb54b82ef8b89f2735cf5d5d2529a23c6ac93a8c4b8bbb28b28"
   name = "github.com/pelletier/go-toml"
   packages = ["."]
+  pruneopts = "UT"
   revision = "acdc4509485b587f5e675510c4f2c63e90ff68a8"
   version = "v1.1.0"
 
 [[projects]]
+  digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
+  pruneopts = "UT"
   revision = "792786c7400a136282c1664665ae0a8db921c6c2"
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:ed615c5430ecabbb0fb7629a182da65ecee6523900ac1ac932520860878ffcad"
   name = "github.com/robfig/cron"
   packages = ["."]
+  pruneopts = "UT"
   revision = "b41be1df696709bb6395fe435af20370037c0b4c"
   version = "v1.1"
 
 [[projects]]
+  digest = "1:f85e109eda8f6080877185d1c39e98dd8795e1780c08beca28304b87fd855a1c"
   name = "github.com/stretchr/testify"
   packages = ["assert"]
+  pruneopts = "UT"
   revision = "12b6f73e6084dad08a7c6e575284b177ecafbc71"
   version = "v1.2.1"
 
 [[projects]]
+  digest = "1:3c1a69cdae3501bf75e76d0d86dc6f2b0a7421bc205c0cb7b96b19eed464a34d"
   name = "go.uber.org/atomic"
   packages = ["."]
+  pruneopts = "UT"
   revision = "1ea20fb1cbb1cc08cbd0d913a96dead89aa18289"
   version = "v1.3.2"
 
 [[projects]]
+  digest = "1:60bf2a5e347af463c42ed31a493d817f8a72f102543060ed992754e689805d1a"
   name = "go.uber.org/multierr"
   packages = ["."]
+  pruneopts = "UT"
   revision = "3c4937480c32f4c13a875a1829af76c98ca3d40a"
   version = "v1.1.0"
 
 [[projects]]
+  digest = "1:9580b1b079114140ade8cec957685344d14f00119e0241f6b369633cb346eeb3"
   name = "go.uber.org/zap"
   packages = [
     ".",
@@ -51,14 +66,20 @@
     "internal/bufferpool",
     "internal/color",
     "internal/exit",
-    "zapcore"
+    "zapcore",
   ]
+  pruneopts = "UT"
   revision = "eeedf312bc6c57391d84767a4cd413f02a917974"
   version = "v1.8.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "399a89bb181a66c0497f3e337256c6c7ded7c2c2e62d33355464c86a8bb3ce1e"
+  input-imports = [
+    "github.com/pelletier/go-toml",
+    "github.com/robfig/cron",
+    "github.com/stretchr/testify/assert",
+    "go.uber.org/zap",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -105,7 +105,7 @@ func (c *Command) Run(ctx context.Context, cancel context.CancelFunc) {
 				log.Fatal(
 					"Failed getting user",
 					zap.String("run_as", runAs),
-					zap.String("cmd", c.Command),
+					zap.String("cmd", command),
 					zap.Error(err),
 				)
 			}
@@ -115,8 +115,8 @@ func (c *Command) Run(ctx context.Context, cancel context.CancelFunc) {
 			process.SysProcAttr.Credential = &syscall.Credential{Uid: uint32(c.uid), Gid: uint32(c.gid)}
 		}
 
-		process.Stdout = logger{"stdout", c.Command}
-		process.Stderr = logger{"stderr", c.Command}
+		process.Stdout = logger{"stdout", command}
+		process.Stderr = logger{"stderr", command}
 		process.Stdin = nil
 		log.Info("Starting", zap.Strings("args", args), zap.String("user", c.user))
 
@@ -132,7 +132,7 @@ func (c *Command) Run(ctx context.Context, cancel context.CancelFunc) {
 
 		// Setup signaling
 		catch := make(chan os.Signal, 1)
-		signal.Notify(catch, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
+		signal.Notify(catch, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM)
 
 		wg.Add(1)
 		go func() {
@@ -169,9 +169,18 @@ func (c *Command) Run(ctx context.Context, cancel context.CancelFunc) {
 func signalProcessWithTimeout(process *exec.Cmd, sig os.Signal) {
 	done := make(chan bool)
 	go func() {
-		process.Process.Signal(syscall.SIGINT)
-		process.Process.Signal(syscall.SIGTERM)
-		process.Wait()
+
+		if err := process.Process.Signal(syscall.SIGINT); err != nil {
+			log.Warn("SIGINT failed", zap.Error(err))
+		}
+
+		if err := process.Process.Signal(syscall.SIGTERM); err != nil {
+			log.Warn("SIGTERM failed", zap.Error(err))
+		}
+
+		if err := process.Wait(); err != nil {
+			log.Warn("Wait failed", zap.Error(err))
+		}
 		close(done)
 	}()
 	select {
@@ -182,6 +191,9 @@ func signalProcessWithTimeout(process *exec.Cmd, sig os.Signal) {
 			"Command termianted due to timeout",
 			zap.String("cmd", process.Path),
 		)
-		process.Process.Kill()
+
+		if err := process.Process.Kill(); err != nil {
+			log.Warn("SIGTERM failed", zap.Error(err))
+		}
 	}
 }
