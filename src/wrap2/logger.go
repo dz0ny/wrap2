@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"net"
 	"os"
 
@@ -44,11 +45,7 @@ func (ul *UnixLogger) Serve() {
 			conn.Close()
 			return
 		}
-
-		log.Info(
-			buf.String(),
-			zap.String("kind", "unixlog"),
-		)
+		fmt.Println(buf.String())
 		conn.Close()
 	}
 }
