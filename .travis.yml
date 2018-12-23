@@ -2,7 +2,7 @@ language: go
 sudo: false
 dist: trusty
 go:
-    - "1.11.2"
+    - "1.11.4"
 script:
 - ".travis/make all"
 deploy:

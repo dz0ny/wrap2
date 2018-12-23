@@ -17,5 +17,11 @@
 [[cron]]
   schedule = "@every 5s"
   [cron.job]
-    cmd = "echo tick"
+    cmd = "echo tick5"
+    user = "www-data"
+
+[[cron]]
+  schedule = "@every 15s"
+  [cron.job]
+    cmd = "echo tick15"
     user = "www-data"

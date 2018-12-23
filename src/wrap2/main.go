@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"wrap2/version"
 
+	"github.com/jinzhu/copier"
 	"github.com/robfig/cron"
 	"go.uber.org/zap"
 )
@@ -44,7 +45,9 @@ func main() {
 		config.PreStart.RunBlocking()
 	}
 
-	for _, cj := range config.Cron {
+	for _, job := range config.Cron {
+		cj := Cron{}
+		copier.Copy(&cj, &job)
 		log.Info(
 			"Scheduling cron",
 			zap.String("cmd", cj.Command.Command),

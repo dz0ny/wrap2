@@ -13,3 +13,7 @@
 [[override]]
   name = "github.com/golangci/golangci-lint"
   version = "1.10.2"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/jinzhu/copier"
