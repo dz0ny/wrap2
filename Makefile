@@ -1,16 +1,16 @@
 VERSION := 1.2.3
-PKG := wrap2
+PKG := github.com/dz0ny/wrap2
 COMMIT := $(shell git rev-parse HEAD)
 BUILD_TIME := $(shell date -u +%FT%T)
 BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
-CURRENT_TARGET = $(PKG)-$(shell uname -s)-$(shell uname -m)
+CURRENT_TARGET = wrap2-$(shell uname -s)-$(shell uname -m)
 TARGETS := Linux-amd64-x86_64
 
 os = $(word 1, $(subst -, ,$@))
 arch = $(word 3, $(subst -, ,$@))
 goarch = $(word 2, $(subst -, ,$@))
 goos = $(shell echo $(os) | tr A-Z a-z)
-output = $(PKG)-$(os)-$(arch)
+output = wrap2-$(os)-$(arch)
 version_flags = -X $(PKG)/version.Version=$(VERSION) \
  -X $(PKG)/version.CommitHash=${COMMIT} \
  -X $(PKG)/version.Branch=${BRANCH} \
@@ -35,26 +35,6 @@ $(TARGETS):
 .PHONY: build
 build: $(TARGETS)
 
-#
-# Install app for current system
-#
-install: build
-	sudo mv $(CURRENT_TARGET) /usr/local/bin/$(PKG)
-
-#
-# Install locked dependecies
-#
-ensure: bin/dep
-	cd src/$(PKG); dep ensure
-
-#
-# Update all locked dependecies
-#
-update: bin/dep
-	cd src/$(PKG); dep ensure -update
-
-bin/dep:
-	go get -u github.com/golang/dep/cmd/dep
 
 bin/github-release:
 	go get -u github.com/aktau/github-release

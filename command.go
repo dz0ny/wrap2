@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -49,7 +51,7 @@ func (l logger) Write(data []byte) (int, error) {
 func (c *Command) RunBlocking() {
 	args := strings.Split(c.Command, " ")
 	process := exec.Command(args[0], args[1:]...)
-	process.SysProcAttr = &syscall.SysProcAttr{}
+	process.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
 	if c.RunAs != "" {
 		currentUser, err := user.Lookup(c.RunAs)
@@ -82,12 +84,29 @@ func (c *Command) RunBlocking() {
 	}
 
 	err = process.Wait()
-	if err != nil {
-		log.Fatal(
-			"Failed waiting for command to finish",
-			zap.String("cmd", c.Command),
-			zap.Error(err),
-		)
+	if err != nil && fmt.Sprintf("%T", err) == "*exec.ExitError" {
+		// This is the normal case which is not really an error. It's string
+		// representation is only "*exec.ExitError". It only means the cmd
+		// did not exit zero and caller should see ExitError.Stderr, which
+		// we already have. So first we'll have this as the real/underlying
+		// type, then discard err so status.Error doesn't contain a useless
+		// "*exec.ExitError". With the real type we can get the non-zero
+		// exit code and determine if the process was signaled, which yields
+		// a more specific error message, so we set err again in that case.
+		exiterr := err.(*exec.ExitError)
+		err = nil
+		if waitStatus, ok := exiterr.Sys().(syscall.WaitStatus); ok {
+			exitCode := waitStatus.ExitStatus() // -1 if signaled
+			if waitStatus.Signaled() {
+				err = errors.New(exiterr.Error()) // "signal: terminated"
+				log.Fatal(
+					"Failed waiting for command to finish",
+					zap.String("cmd", c.Command),
+					zap.Int("exitCode", exitCode),
+					zap.Error(err),
+				)
+			}
+		}
 	}
 }
 
@@ -97,7 +116,7 @@ func (c *Command) Run(ctx context.Context, cancel context.CancelFunc) {
 		defer wg.Done()
 		args := strings.Split(command, " ")
 		process := exec.Command(args[0], args[1:]...)
-		process.SysProcAttr = &syscall.SysProcAttr{}
+		process.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
 		if runAs != "" {
 			currentUser, err := user.Lookup(runAs)
@@ -136,7 +155,6 @@ func (c *Command) Run(ctx context.Context, cancel context.CancelFunc) {
 
 		wg.Add(1)
 		go func() {
-			defer wg.Done()
 			select {
 			case sig := <-catch:
 				log.Info(
@@ -160,8 +178,13 @@ func (c *Command) Run(ctx context.Context, cancel context.CancelFunc) {
 				zap.String("cmd", command),
 				zap.Error(err),
 			)
-			// OPTIMIZE: This could be cleaner
-			os.Exit(err.(*exec.ExitError).Sys().(syscall.WaitStatus).ExitStatus())
+			switch err.(type) {
+			case *exec.ExitError:
+				os.Exit(err.(*exec.ExitError).Sys().(syscall.WaitStatus).ExitStatus())
+			default:
+				zap.Error(err)
+			}
+
 		}
 	}(c.Command, c.RunAs)
 }

@@ -3,15 +3,15 @@
   user = "www-data"
 
 [[process]]
-  cmd = "sleep 60"
+  cmd = "sleep 30"
   user = "www-data"
 
 [[process]]
-  cmd = "sleep 60"
+  cmd = "sleep 30"
   user = "dz0ny"
 
 [post_start]
-  cmd = "sleep 20"
+  cmd = "sleep 10"
   user = "www-data"
 
 [[cron]]

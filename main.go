@@ -8,10 +8,10 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
-	"wrap2/version"
+
+	"github.com/dz0ny/wrap2/version"
 
 	"github.com/jinzhu/copier"
-	"github.com/ramr/go-reaper"
 	"github.com/robfig/cron"
 	"go.uber.org/zap"
 )
@@ -29,6 +29,35 @@ func init() {
 	flag.BoolVar(&showVersion, "version", false, "Show build time and version")
 }
 
+// From https://github.com/ramr/go-reaper/blob/master/reaper.go
+func reapLoop() {
+	c := make(chan os.Signal)
+	signal.Notify(c, syscall.SIGCHLD)
+	for range c {
+		reapChildren()
+	}
+}
+
+func reapChildren() {
+	for {
+		var (
+			ws  syscall.WaitStatus
+			pid int
+			err error
+		)
+		for {
+			pid, err = syscall.Wait4(-1, &ws, 0, nil)
+			if err != syscall.EINTR {
+				break
+			}
+		}
+		if err == syscall.ECHILD {
+			return // done
+		}
+		log.Info("reaped child process", zap.Int("pid", pid), zap.Int32("ws", int32(ws)))
+	}
+}
+
 func main() {
 
 	flag.Parse()
@@ -40,8 +69,6 @@ func main() {
 
 	cronRunner := cron.New()
 	ctx, cancel := context.WithCancel(context.Background())
-
-	go reaper.Reap()
 
 	config := NewConfig(configLocation)
 	if config.PreStart.Command != "" {
@@ -98,11 +125,8 @@ func main() {
 	unixlog := NewUnixLogger(loggerLocation)
 	go unixlog.Serve()
 
-	// Handle SIGINT and SIGTERM.
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
-	<-ch //block
+	go reapLoop()
 
-	cancel()
 	wg.Wait()
+	cancel()
 }
