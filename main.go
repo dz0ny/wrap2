@@ -8,7 +8,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
-	"wrap2/version"
+	"github.com/dz0ny/wrap2/version"
 
 	"github.com/jinzhu/copier"
 	"github.com/ramr/go-reaper"

@@ -27,7 +27,7 @@ endef
 
 .PHONY: $(TARGETS)
 $(TARGETS):
-	env GOOS=$(goos) GOARCH=$(goarch) go build --ldflags '-s -w $(version_flags)' -o $(output) $(PKG)
+	env GOOS=$(goos) GOARCH=$(goarch) go build --ldflags '-s -w $(version_flags)' -o $(output) github.com/dz0ny/$(PKG)
 
 #
 # Build all defined targets
@@ -35,26 +35,6 @@ $(TARGETS):
 .PHONY: build
 build: $(TARGETS)
 
-#
-# Install app for current system
-#
-install: build
-	sudo mv $(CURRENT_TARGET) /usr/local/bin/$(PKG)
-
-#
-# Install locked dependecies
-#
-ensure: bin/dep
-	cd src/$(PKG); dep ensure
-
-#
-# Update all locked dependecies
-#
-update: bin/dep
-	cd src/$(PKG); dep ensure -update
-
-bin/dep:
-	go get -u github.com/golang/dep/cmd/dep
 
 bin/github-release:
 	go get -u github.com/aktau/github-release
