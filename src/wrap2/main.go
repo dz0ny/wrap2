@@ -11,6 +11,7 @@ import (
 	"wrap2/version"
 
 	"github.com/jinzhu/copier"
+	"github.com/ramr/go-reaper"
 	"github.com/robfig/cron"
 	"go.uber.org/zap"
 )
@@ -39,6 +40,8 @@ func main() {
 
 	cronRunner := cron.New()
 	ctx, cancel := context.WithCancel(context.Background())
+
+	go reaper.Reap()
 
 	config := NewConfig(configLocation)
 	if config.PreStart.Command != "" {
