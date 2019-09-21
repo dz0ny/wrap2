@@ -3,11 +3,11 @@
   user = "www-data"
 
 [[process]]
-  cmd = "sleep 300"
+  cmd = "sleep 30"
   user = "www-data"
 
 [[process]]
-  cmd = "sleep 300"
+  cmd = "sleep 35"
   user = "dz0ny"
 
 [post_start]

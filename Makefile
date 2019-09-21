@@ -1,4 +1,4 @@
-VERSION := 1.2.5
+VERSION := 1.2.7
 PKG := github.com/dz0ny/wrap2
 COMMIT := $(shell git rev-parse HEAD)
 BUILD_TIME := $(shell date -u +%FT%T)

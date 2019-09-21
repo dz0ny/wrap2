@@ -97,7 +97,9 @@ func (c *Command) RunBlocking(fatal bool) {
 	}
 
 	err = process.Wait()
-	if err != nil {
+	msg := err.Error()
+	// no *child processes is normal error* when we are pid 1
+	if err != nil && !strings.Contains(msg, "no child processes") {
 		if fatal {
 			log.Fatal(
 				"Process terminated",

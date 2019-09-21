@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"os"
 	"sync"
-	"syscall"
-	"time"
 
 	"github.com/dz0ny/wrap2/version"
 
@@ -29,44 +27,11 @@ func init() {
 	flag.BoolVar(&showVersion, "version", false, "Show build time and version")
 }
 
-func removeZombies(ctx context.Context, wg *sync.WaitGroup) {
-	for {
-		var status syscall.WaitStatus
-
-		// Wait for orphaned zombie process
-		pid, _ := syscall.Wait4(-1, &status, syscall.WNOHANG, nil)
-
-		if pid <= 0 {
-			// PID is 0 or -1 if no child waiting
-			// so we wait for 1 second for next check
-			time.Sleep(1 * time.Second)
-		} else {
-			// PID is > 0 if a child was reaped
-			// we immediately check if another one
-			// is waiting
-			continue
-		}
-
-		// Non-blocking test
-		// if context is done
-		select {
-		case <-ctx.Done():
-			// Context is done
-			// so we stop goroutine
-			wg.Done()
-			return
-		default:
-		}
-	}
-}
-
-func cleanQuit(cancel context.CancelFunc, wg *sync.WaitGroup, code int) {
+func cleanQuit(cancel context.CancelFunc) {
 	// Signal zombie goroutine to stop
 	// and wait for it to release waitgroup
-	cancel()
 	wg.Wait()
-
-	os.Exit(code)
+	os.Exit(0)
 }
 
 func main() {
@@ -79,8 +44,7 @@ func main() {
 	}
 
 	cronRunner := cron.New()
-	ctx, cancel := context.WithCancel(context.Background())
-	go removeZombies(ctx, &wg)
+	_, cancel := context.WithCancel(context.Background())
 
 	config := NewConfig(configLocation)
 	if config.PreStart.Command != "" {
@@ -137,7 +101,7 @@ func main() {
 
 	unixlog := NewUnixLogger(loggerLocation)
 	go unixlog.Serve()
-
+	go Reap()
 	// Wait removeZombies goroutine
-	cleanQuit(cancel, &wg, 0)
+	cleanQuit(cancel)
 }
