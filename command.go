@@ -1,9 +1,6 @@
 package main
 
 import (
-	"context"
-	"errors"
-	"fmt"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -11,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
-	"time"
 
 	"go.uber.org/zap"
 )
@@ -49,6 +45,13 @@ func (l logger) Write(data []byte) (int, error) {
 
 // RunBlocking runs command in blocking mode
 func (c *Command) RunBlocking() {
+
+	// Register chan to receive system signals
+	commandSig := make(chan os.Signal, 1)
+	defer close(commandSig)
+	signal.Notify(commandSig)
+	defer signal.Reset()
+
 	args := strings.Split(c.Command, " ")
 	process := exec.Command(args[0], args[1:]...)
 	process.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
@@ -74,6 +77,16 @@ func (c *Command) RunBlocking() {
 	process.Stdin = nil
 	log.Info("Starting", zap.Strings("args", args), zap.String("user", c.user))
 
+	// Goroutine for signals forwarding
+	go func() {
+		for sig := range commandSig {
+			if sig != syscall.SIGCHLD {
+				// Forward signal to main process and all children
+				syscall.Kill(-process.Process.Pid, sig.(syscall.Signal))
+			}
+		}
+	}()
+
 	err := process.Start()
 	if err != nil {
 		log.Fatal(
@@ -84,35 +97,25 @@ func (c *Command) RunBlocking() {
 	}
 
 	err = process.Wait()
-	if err != nil && fmt.Sprintf("%T", err) == "*exec.ExitError" {
-		// This is the normal case which is not really an error. It's string
-		// representation is only "*exec.ExitError". It only means the cmd
-		// did not exit zero and caller should see ExitError.Stderr, which
-		// we already have. So first we'll have this as the real/underlying
-		// type, then discard err so status.Error doesn't contain a useless
-		// "*exec.ExitError". With the real type we can get the non-zero
-		// exit code and determine if the process was signaled, which yields
-		// a more specific error message, so we set err again in that case.
-		exiterr := err.(*exec.ExitError)
-		err = nil
-		if waitStatus, ok := exiterr.Sys().(syscall.WaitStatus); ok {
-			exitCode := waitStatus.ExitStatus() // -1 if signaled
-			if waitStatus.Signaled() {
-				err = errors.New(exiterr.Error()) // "signal: terminated"
-				log.Fatal(
-					"Failed waiting for command to finish",
-					zap.String("cmd", c.Command),
-					zap.Int("exitCode", exitCode),
-					zap.Error(err),
-				)
-			}
-		}
+	if err != nil {
+		log.Fatal(
+			"Process termiated",
+			zap.String("cmd", c.Command),
+			zap.Error(err),
+		)
 	}
 }
 
 // Run executes process and redirects pipes
-func (c *Command) Run(ctx context.Context, cancel context.CancelFunc) {
+func (c *Command) Run() {
 	go func(command, runAs string) {
+
+		// Register chan to receive system signals
+		commandSig := make(chan os.Signal, 1)
+		defer close(commandSig)
+		signal.Notify(commandSig)
+		defer signal.Reset()
+		wg.Add(1)
 		defer wg.Done()
 		args := strings.Split(command, " ")
 		process := exec.Command(args[0], args[1:]...)
@@ -149,74 +152,24 @@ func (c *Command) Run(ctx context.Context, cancel context.CancelFunc) {
 			)
 		}
 
-		// Setup signaling
-		catch := make(chan os.Signal, 1)
-		signal.Notify(catch, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM)
-
-		wg.Add(1)
+		// Goroutine for signals forwarding
 		go func() {
-			select {
-			case sig := <-catch:
-				log.Info(
-					"Terminating",
-					zap.String("cmd", command),
-					zap.String("signal", sig.String()),
-				)
-				signalProcessWithTimeout(process, sig)
-				cancel()
-			case <-ctx.Done():
-				// exit when context is done
+			for sig := range commandSig {
+				if sig != syscall.SIGCHLD {
+					// Forward signal to main process and all children
+					syscall.Kill(-process.Process.Pid, sig.(syscall.Signal))
+				}
 			}
 		}()
 
 		err = process.Wait()
-		cancel()
-
 		if err != nil {
-			log.Info(
-				"Command terminated",
-				zap.String("cmd", command),
+			log.Fatal(
+				"Process termiated",
+				zap.String("cmd", c.Command),
 				zap.Error(err),
 			)
-			switch err.(type) {
-			case *exec.ExitError:
-				os.Exit(err.(*exec.ExitError).Sys().(syscall.WaitStatus).ExitStatus())
-			default:
-				zap.Error(err)
-			}
-
 		}
+
 	}(c.Command, c.RunAs)
-}
-
-func signalProcessWithTimeout(process *exec.Cmd, sig os.Signal) {
-	done := make(chan bool)
-	go func() {
-
-		if err := process.Process.Signal(syscall.SIGINT); err != nil {
-			log.Warn("SIGINT failed", zap.Error(err))
-		}
-
-		if err := process.Process.Signal(syscall.SIGTERM); err != nil {
-			log.Warn("SIGTERM failed", zap.Error(err))
-		}
-
-		if err := process.Wait(); err != nil {
-			log.Warn("Wait failed", zap.Error(err))
-		}
-		close(done)
-	}()
-	select {
-	case <-done:
-		return
-	case <-time.After(5 * time.Second):
-		log.Info(
-			"Command termianted due to timeout",
-			zap.String("cmd", process.Path),
-		)
-
-		if err := process.Process.Kill(); err != nil {
-			log.Warn("SIGTERM failed", zap.Error(err))
-		}
-	}
 }

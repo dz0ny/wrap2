@@ -5,9 +5,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/dz0ny/wrap2/version"
 
@@ -29,33 +29,44 @@ func init() {
 	flag.BoolVar(&showVersion, "version", false, "Show build time and version")
 }
 
-// From https://github.com/ramr/go-reaper/blob/master/reaper.go
-func reapLoop() {
-	c := make(chan os.Signal)
-	signal.Notify(c, syscall.SIGCHLD)
-	for range c {
-		reapChildren()
+func removeZombies(ctx context.Context, wg *sync.WaitGroup) {
+	for {
+		var status syscall.WaitStatus
+
+		// Wait for orphaned zombie process
+		pid, _ := syscall.Wait4(-1, &status, syscall.WNOHANG, nil)
+
+		if pid <= 0 {
+			// PID is 0 or -1 if no child waiting
+			// so we wait for 1 second for next check
+			time.Sleep(1 * time.Second)
+		} else {
+			// PID is > 0 if a child was reaped
+			// we immediately check if another one
+			// is waiting
+			continue
+		}
+
+		// Non-blocking test
+		// if context is done
+		select {
+		case <-ctx.Done():
+			// Context is done
+			// so we stop goroutine
+			wg.Done()
+			return
+		default:
+		}
 	}
 }
 
-func reapChildren() {
-	for {
-		var (
-			ws  syscall.WaitStatus
-			pid int
-			err error
-		)
-		for {
-			pid, err = syscall.Wait4(-1, &ws, 0, nil)
-			if err != syscall.EINTR {
-				break
-			}
-		}
-		if err == syscall.ECHILD {
-			return // done
-		}
-		log.Info("reaped child process", zap.Int("pid", pid), zap.Int32("ws", int32(ws)))
-	}
+func cleanQuit(cancel context.CancelFunc, wg *sync.WaitGroup, code int) {
+	// Signal zombie goroutine to stop
+	// and wait for it to release waitgroup
+	cancel()
+	wg.Wait()
+
+	os.Exit(code)
 }
 
 func main() {
@@ -69,6 +80,7 @@ func main() {
 
 	cronRunner := cron.New()
 	ctx, cancel := context.WithCancel(context.Background())
+	go removeZombies(ctx, &wg)
 
 	config := NewConfig(configLocation)
 	if config.PreStart.Command != "" {
@@ -115,7 +127,8 @@ func main() {
 				)
 			}
 		}
-		proc.Run(ctx, cancel)
+
+		proc.Run()
 	}
 
 	if config.PostStart.Command != "" {
@@ -125,8 +138,6 @@ func main() {
 	unixlog := NewUnixLogger(loggerLocation)
 	go unixlog.Serve()
 
-	go reapLoop()
-
-	wg.Wait()
-	cancel()
+	// Wait removeZombies goroutine
+	cleanQuit(cancel, &wg, 0)
 }
