@@ -44,7 +44,7 @@ func (l logger) Write(data []byte) (int, error) {
 }
 
 // RunBlocking runs command in blocking mode
-func (c *Command) RunBlocking() {
+func (c *Command) RunBlocking(fatal bool) {
 
 	// Register chan to receive system signals
 	commandSig := make(chan os.Signal, 1)
@@ -98,12 +98,30 @@ func (c *Command) RunBlocking() {
 
 	err = process.Wait()
 	if err != nil {
-		log.Fatal(
-			"Process termiated",
+		if fatal {
+			log.Fatal(
+				"Process terminated",
+				zap.String("cmd", c.Command),
+				zap.Error(err),
+			)
+		} else {
+			log.Warn(
+				"Process terminated",
+				zap.String("cmd", c.Command),
+				zap.Error(err),
+			)
+		}
+	} else {
+		log.Info(
+			"Process ended",
 			zap.String("cmd", c.Command),
-			zap.Error(err),
 		)
 	}
+}
+
+// RunBlockingNonFatal runs command in blocking mode
+func (c *Command) RunBlockingNonFatal() {
+	c.RunBlocking(false)
 }
 
 // Run executes process and redirects pipes
@@ -165,7 +183,7 @@ func (c *Command) Run() {
 		err = process.Wait()
 		if err != nil {
 			log.Fatal(
-				"Process termiated",
+				"Process terminated",
 				zap.String("cmd", c.Command),
 				zap.Error(err),
 			)

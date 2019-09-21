@@ -84,7 +84,7 @@ func main() {
 
 	config := NewConfig(configLocation)
 	if config.PreStart.Command != "" {
-		config.PreStart.RunBlocking()
+		config.PreStart.RunBlocking(true)
 	}
 
 	for _, job := range config.Cron {
@@ -95,7 +95,7 @@ func main() {
 			zap.String("cmd", cj.Command.Command),
 			zap.String("schedule", cj.Schedule),
 		)
-		if err := cronRunner.AddFunc(cj.Schedule, cj.RunBlocking); err != nil {
+		if err := cronRunner.AddFunc(cj.Schedule, cj.RunBlockingNonFatal); err != nil {
 			log.Fatal("Adding cron entry failed", zap.Error(err))
 		}
 	}
@@ -132,7 +132,7 @@ func main() {
 	}
 
 	if config.PostStart.Command != "" {
-		config.PostStart.RunBlocking()
+		config.PostStart.RunBlocking(true)
 	}
 
 	unixlog := NewUnixLogger(loggerLocation)
