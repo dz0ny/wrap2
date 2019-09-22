@@ -1,9 +1,9 @@
 package main
 
 import (
+	"context"
 	"os"
 	"os/exec"
-	"os/signal"
 	"os/user"
 	"strconv"
 	"strings"
@@ -44,13 +44,7 @@ func (l logger) Write(data []byte) (int, error) {
 }
 
 // RunBlocking runs command in blocking mode
-func (c *Command) RunBlocking(fatal bool) {
-
-	// Register chan to receive system signals
-	commandSig := make(chan os.Signal, 1)
-	defer close(commandSig)
-	signal.Notify(commandSig)
-	defer signal.Reset()
+func (c *Command) RunBlocking(fatal bool, ctx context.Context) {
 
 	args := strings.Split(c.Command, " ")
 	process := exec.Command(args[0], args[1:]...)
@@ -77,16 +71,6 @@ func (c *Command) RunBlocking(fatal bool) {
 	process.Stdin = nil
 	log.Info("Starting", zap.Strings("args", args), zap.String("user", c.user))
 
-	// Goroutine for signals forwarding
-	go func() {
-		for sig := range commandSig {
-			if sig != syscall.SIGCHLD {
-				// Forward signal to main process and all children
-				syscall.Kill(-process.Process.Pid, sig.(syscall.Signal))
-			}
-		}
-	}()
-
 	err := process.Start()
 	if err != nil {
 		log.Fatal(
@@ -95,11 +79,26 @@ func (c *Command) RunBlocking(fatal bool) {
 			zap.Error(err),
 		)
 	}
+	innerCtx, cancelWatcher := context.WithCancel(context.Background())
 
+	go func() {
+		for {
+			select {
+			case <-innerCtx.Done():
+				log.Info("Done", zap.Int("pid", process.Process.Pid))
+				return
+			case <-ctx.Done():
+				log.Info("Terminating", zap.Int("pid", process.Process.Pid))
+				process.Process.Kill()
+				return
+			}
+		}
+	}()
 	err = process.Wait()
-	msg := err.Error()
+	cancelWatcher()
+
 	// no *child processes is normal error* when we are pid 1
-	if err != nil && !strings.Contains(msg, "no child processes") {
+	if err != nil && !strings.Contains(err.Error(), "no child processes") {
 		if fatal {
 			log.Fatal(
 				"Process terminated",
@@ -122,20 +121,16 @@ func (c *Command) RunBlocking(fatal bool) {
 }
 
 // RunBlockingNonFatal runs command in blocking mode
-func (c *Command) RunBlockingNonFatal() {
-	c.RunBlocking(false)
+func (c *Command) RunBlockingNonFatal(ctx context.Context) {
+	c.RunBlocking(false, ctx)
 }
 
 // Run executes process and redirects pipes
-func (c *Command) Run() {
-	go func(command, runAs string) {
+func (c *Command) Run(ctx context.Context) {
+	// Register chan to receive system signals
+	wg.Add(1)
+	go func(command, runAs string, ctx context.Context) {
 
-		// Register chan to receive system signals
-		commandSig := make(chan os.Signal, 1)
-		defer close(commandSig)
-		signal.Notify(commandSig)
-		defer signal.Reset()
-		wg.Add(1)
 		defer wg.Done()
 		args := strings.Split(command, " ")
 		process := exec.Command(args[0], args[1:]...)
@@ -172,24 +167,25 @@ func (c *Command) Run() {
 			)
 		}
 
-		// Goroutine for signals forwarding
 		go func() {
-			for sig := range commandSig {
-				if sig != syscall.SIGCHLD {
-					// Forward signal to main process and all children
-					syscall.Kill(-process.Process.Pid, sig.(syscall.Signal))
+			for {
+				select {
+				case <-ctx.Done(): // Done returns a channel that's closed when work done on behalf of this context is canceled
+					log.Info("Terminating", zap.Int("pid", process.Process.Pid), zap.String("cmd", c.Command))
+					process.Process.Kill()
+					return
 				}
 			}
 		}()
 
 		err = process.Wait()
 		if err != nil {
-			log.Fatal(
+			log.Warn(
 				"Process terminated",
 				zap.String("cmd", c.Command),
 				zap.Error(err),
 			)
 		}
 
-	}(c.Command, c.RunAs)
+	}(c.Command, c.RunAs, ctx)
 }

@@ -5,6 +5,7 @@ go 1.12
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/hashicorp/go-reap v0.0.0-20170704170343-bf58d8a43e7b
 	github.com/jinzhu/copier v0.0.0-20180308034124-7e38e58719c3
 	github.com/pelletier/go-toml v1.2.0
 	github.com/pkg/errors v0.8.1 // indirect
@@ -14,5 +15,6 @@ require (
 	go.uber.org/atomic v1.3.2 // indirect
 	go.uber.org/multierr v1.1.0 // indirect
 	go.uber.org/zap v1.9.1
+	golang.org/x/sys v0.0.0-20190922100055-0a153f010e69 // indirect
 	gopkg.in/yaml.v2 v2.2.2 // indirect
 )

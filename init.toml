@@ -11,7 +11,7 @@
   user = "dz0ny"
 
 [post_start]
-  cmd = "sleep 10"
+  cmd = "sleep 13"
   user = "www-data"
 
 [[cron]]

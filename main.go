@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 
 	"github.com/dz0ny/wrap2/version"
+	"github.com/hashicorp/go-reap"
 
 	"github.com/jinzhu/copier"
 	"github.com/robfig/cron"
@@ -27,28 +29,47 @@ func init() {
 	flag.BoolVar(&showVersion, "version", false, "Show build time and version")
 }
 
-func cleanQuit(cancel context.CancelFunc) {
-	// Signal zombie goroutine to stop
-	// and wait for it to release waitgroup
-	wg.Wait()
-	os.Exit(0)
-}
-
 func main() {
 
 	flag.Parse()
-
+	log.Info(version.String())
 	if showVersion {
-		fmt.Println(version.String())
 		os.Exit(0)
 	}
 
-	cronRunner := cron.New()
-	_, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
+	pids := make(reap.PidCh, 1)
+	errors := make(reap.ErrorCh, 1)
+	done := make(chan struct{})
+	mainHandler := make(chan os.Signal, 1)
+	signal.Notify(mainHandler, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGKILL)
 
+	go func() {
+		sig := <-mainHandler
+		log.Info("Main interrupt done, canceling workers", zap.String("received", sig.String()))
+		cancel()
+		done <- struct{}{}
+	}()
+
+	go func() {
+		for {
+			select {
+			case pid := <-pids:
+				log.Info("Reaped child process", zap.Int("pid", pid))
+			case err := <-errors:
+				log.Error("Error reaping child process", zap.Error(err))
+			case <-done:
+				return
+			}
+		}
+	}()
+
+	go reap.ReapChildren(pids, errors, done, nil)
+
+	cronRunner := cron.New()
 	config := NewConfig(configLocation)
 	if config.PreStart.Command != "" {
-		config.PreStart.RunBlocking(true)
+		config.PreStart.RunBlocking(false, ctx)
 	}
 
 	for _, job := range config.Cron {
@@ -59,7 +80,7 @@ func main() {
 			zap.String("cmd", cj.Command.Command),
 			zap.String("schedule", cj.Schedule),
 		)
-		if err := cronRunner.AddFunc(cj.Schedule, cj.RunBlockingNonFatal); err != nil {
+		if err := cronRunner.AddFunc(cj.Schedule, func() { cj.RunBlockingNonFatal(ctx) }); err != nil {
 			log.Fatal("Adding cron entry failed", zap.Error(err))
 		}
 	}
@@ -92,16 +113,22 @@ func main() {
 			}
 		}
 
-		proc.Run()
+		proc.Run(ctx)
 	}
 
 	if config.PostStart.Command != "" {
-		config.PostStart.RunBlocking(true)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			config.PostStart.RunBlocking(false, ctx)
+		}()
 	}
 
+	log.Info("Staring logger socket", zap.String("location", loggerLocation))
 	unixlog := NewUnixLogger(loggerLocation)
 	go unixlog.Serve()
-	go Reap()
-	// Wait removeZombies goroutine
-	cleanQuit(cancel)
+	log.Info("Event loop ready")
+
+	wg.Wait()
+	os.Exit(0)
 }
