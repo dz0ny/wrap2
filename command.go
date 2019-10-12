@@ -35,7 +35,7 @@ func (l logger) Write(data []byte) (int, error) {
 	}
 
 	// wrap in json otherwise
-	log.Info(
+	log.Debug(
 		string(data),
 		zap.String("kind", l.Kind),
 		zap.String("cmd", l.Command),
@@ -69,7 +69,7 @@ func (c *Command) RunBlocking(fatal bool, ctx context.Context) {
 	process.Stdout = logger{"stdout", c.Command}
 	process.Stderr = logger{"stderr", c.Command}
 	process.Stdin = nil
-	log.Info("Starting", zap.Strings("args", args), zap.String("user", c.user))
+	log.Debug("Starting", zap.Strings("args", args), zap.String("user", c.user))
 
 	err := process.Start()
 	if err != nil {
@@ -85,10 +85,10 @@ func (c *Command) RunBlocking(fatal bool, ctx context.Context) {
 		for {
 			select {
 			case <-innerCtx.Done():
-				log.Info("Done", zap.Int("pid", process.Process.Pid))
+				log.Debug("Done", zap.Int("pid", process.Process.Pid))
 				return
 			case <-ctx.Done():
-				log.Info("Terminating", zap.Int("pid", process.Process.Pid))
+				log.Debug("Terminating", zap.Int("pid", process.Process.Pid))
 				process.Process.Kill()
 				return
 			}
@@ -106,14 +106,14 @@ func (c *Command) RunBlocking(fatal bool, ctx context.Context) {
 				zap.Error(err),
 			)
 		} else {
-			log.Warn(
+			log.Debug(
 				"Process terminated",
 				zap.String("cmd", c.Command),
 				zap.Error(err),
 			)
 		}
 	} else {
-		log.Info(
+		log.Debug(
 			"Process ended",
 			zap.String("cmd", c.Command),
 		)
@@ -155,7 +155,7 @@ func (c *Command) Run(ctx context.Context) {
 		process.Stdout = logger{"stdout", command}
 		process.Stderr = logger{"stderr", command}
 		process.Stdin = nil
-		log.Info("Starting", zap.Strings("args", args), zap.String("user", c.user))
+		log.Debug("Starting", zap.Strings("args", args), zap.String("user", c.user))
 
 		// start the process
 		err := process.Start()
@@ -171,7 +171,7 @@ func (c *Command) Run(ctx context.Context) {
 			for {
 				select {
 				case <-ctx.Done(): // Done returns a channel that's closed when work done on behalf of this context is canceled
-					log.Info("Terminating", zap.Int("pid", process.Process.Pid), zap.String("cmd", c.Command))
+					log.Debug("Terminating", zap.Int("pid", process.Process.Pid), zap.String("cmd", c.Command))
 					process.Process.Kill()
 					return
 				}
@@ -180,7 +180,7 @@ func (c *Command) Run(ctx context.Context) {
 
 		err = process.Wait()
 		if err != nil {
-			log.Warn(
+			log.Debug(
 				"Process terminated",
 				zap.String("cmd", c.Command),
 				zap.Error(err),

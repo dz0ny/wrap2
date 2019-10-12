@@ -23,7 +23,7 @@ var wg sync.WaitGroup
 var log *zap.Logger
 
 func init() {
-	log = zap.NewExample()
+	log, _ = zap.NewProduction()
 	flag.StringVar(&configLocation, "config", "/provision/init.toml", "Location of the init file")
 	flag.StringVar(&loggerLocation, "logger", "/var/www/mu-plugins/logger.sock", "Location of logger socket")
 	flag.BoolVar(&showVersion, "version", false, "Show build time and version")
@@ -55,7 +55,7 @@ func main() {
 		for {
 			select {
 			case pid := <-pids:
-				log.Info("Reaped child process", zap.Int("pid", pid))
+				log.Debug("Reaped child process", zap.Int("pid", pid))
 			case err := <-errors:
 				log.Error("Error reaping child process", zap.Error(err))
 			case <-done:
