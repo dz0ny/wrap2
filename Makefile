@@ -58,7 +58,7 @@ test: lint cover
 	go test -v -race
 
 cover: bin/gocov
-	gocov test | gocov report
+	bin/gocov test | bin/gocov report
 
 all: ensure build test
 
