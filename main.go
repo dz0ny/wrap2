@@ -19,6 +19,7 @@ import (
 var configLocation string
 var loggerLocation string
 var showVersion bool
+var showDebug bool
 var wg sync.WaitGroup
 var log *zap.Logger
 
@@ -27,11 +28,16 @@ func init() {
 	flag.StringVar(&configLocation, "config", "/provision/init.toml", "Location of the init file")
 	flag.StringVar(&loggerLocation, "logger", "/var/www/mu-plugins/logger.sock", "Location of logger socket")
 	flag.BoolVar(&showVersion, "version", false, "Show build time and version")
+	flag.BoolVar(&showDebug, "debug", false, "Show detailed process traces")
 }
 
 func main() {
-
 	flag.Parse()
+
+	if showDebug {
+		log, _ = zap.NewDevelopment()
+	}
+
 	log.Info(version.String())
 	if showVersion {
 		os.Exit(0)

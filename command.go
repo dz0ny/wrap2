@@ -155,17 +155,12 @@ func (c *Command) Run(ctx context.Context) {
 	process.Stdin = nil
 
 	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				// Done returns a channel that's closed when work done on behalf of this context is canceled
-				log.Debug("Terminating forked", zap.Int("pid", process.Process.Pid), zap.String("cmd", c.Command))
-				err := process.Process.Kill()
-				if err != nil {
-					log.Debug("Terminating forked failed", zap.Int("pid", process.Process.Pid), zap.Error(err))
-				}
-				return
-			}
+		<-ctx.Done()
+		// Done returns a channel that's closed when work done on behalf of this context is canceled
+		log.Debug("Terminating forked", zap.Int("pid", process.Process.Pid), zap.String("cmd", c.Command))
+		err := process.Process.Kill()
+		if err != nil {
+			log.Debug("Terminating forked failed", zap.Int("pid", process.Process.Pid), zap.Error(err))
 		}
 	}()
 

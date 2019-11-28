@@ -63,7 +63,7 @@ cover: bin/gocov
 all: ensure build test
 
 run:
-	./wrap2-Linux-x86_64 --config=init.toml --logger=log.sock
+	./wrap2-Linux-x86_64 --config=init.toml --logger=log.sock --debug
 
 release:
 	git stash
