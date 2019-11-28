@@ -1,4 +1,4 @@
-VERSION := 1.2.9
+VERSION := 1.2.10
 PKG := github.com/dz0ny/wrap2
 COMMIT := $(shell git rev-parse HEAD)
 BUILD_TIME := $(shell date -u +%FT%T)
@@ -16,18 +16,16 @@ version_flags = -X $(PKG)/version.Version=$(VERSION) \
  -X $(PKG)/version.Branch=${BRANCH} \
  -X $(PKG)/version.BuildTime=${BUILD_TIME}
 
-define ghupload
-	bin/github-release upload \
-		--user dz0ny \
-		--repo $(PKG) \
-		--tag "v$(VERSION)" \
-		--name $(PKG)-$(1) \
-		--file $(PKG)-$(1)
+define localbuild
+	GO111MODULE=off go get -u $(1)
+	GO111MODULE=off go build $(1)
+	mkdir -p bin
+	mv $(2) bin/$(2)
 endef
 
 .PHONY: $(TARGETS)
 $(TARGETS):
-	env GOOS=$(goos) GOARCH=$(goarch) go build --ldflags '-s -w $(version_flags)' -o $(output) $(PKG)
+	env GOOS=$(goos) GOARCH=$(goarch) go build -trimpath --ldflags '-s -w $(version_flags)' -o $(output) $(PKG)
 
 #
 # Build all defined targets
@@ -35,18 +33,15 @@ $(TARGETS):
 .PHONY: build
 build: $(TARGETS)
 
-
-bin/github-release:
-	go get -u github.com/aktau/github-release
+.PHONY: ensure
+ensure:
+	go get $(MODULE)
 
 bin/gocov:
-	go get -u github.com/axw/gocov/gocov
+	$(call localbuild,github.com/axw/gocov/gocov,gocov)
 
 bin/golangci-lint:
-	go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
-
-bin/go-ls:
-	go get github.com/laher/gols/cmd/go-ls
+	$(call localbuild,github.com/golangci/golangci-lint/cmd/golangci-lint,golangci-lint)
 
 clean:
 	rm -f $(PKG)
@@ -56,20 +51,16 @@ clean:
 	rm -rf src/$(PKG)/vendor/
 
 lint: bin/golangci-lint
-	bin/golangci-lint run src/$(PKG)/...
-	find src/$(PKG) -not -path "./src/$(PKG)/vendor/*" -name '*.go' | xargs gofmt -w -s
+	bin/golangci-lint run
+	go fmt
 
-test: bin/go-ls lint cover
-	go test -v -race $(shell go-ls $(PKG)/...)
+test: lint cover
+	go test -v -race
 
 cover: bin/gocov
-	gocov test $(shell go-ls $(PKG)/...) | gocov report
-
-upload: bin/github-release
-	$(call ghupload,Linux-x86_64)
+	gocov test | gocov report
 
 all: ensure build test
-
 
 run:
 	./wrap2-Linux-x86_64 --config=init.toml --logger=log.sock

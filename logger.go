@@ -27,7 +27,10 @@ func (ul *UnixLogger) Serve() {
 	if err != nil {
 		log.Fatal("ListenUnix failed", zap.Error(err))
 	}
-	os.Chmod(ul.path, 0666)
+	err = os.Chmod(ul.path, 0666)
+	if err != nil {
+		log.Fatal("Chmod failed", zap.Error(err))
+	}
 	defer os.Remove(ul.path)
 
 	for {

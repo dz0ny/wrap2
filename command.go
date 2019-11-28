@@ -69,7 +69,7 @@ func (c *Command) RunBlocking(fatal bool, ctx context.Context) {
 	process.Stdout = logger{"stdout", c.Command}
 	process.Stderr = logger{"stderr", c.Command}
 	process.Stdin = nil
-	log.Debug("Starting", zap.Strings("args", args), zap.String("user", c.user))
+	log.Info("Starting blocking", zap.Strings("args", args), zap.String("user", c.user))
 
 	err := process.Start()
 	if err != nil {
@@ -88,8 +88,11 @@ func (c *Command) RunBlocking(fatal bool, ctx context.Context) {
 				log.Debug("Done", zap.Int("pid", process.Process.Pid))
 				return
 			case <-ctx.Done():
-				log.Debug("Terminating", zap.Int("pid", process.Process.Pid))
-				process.Process.Kill()
+				log.Debug("Terminating blocking", zap.Int("pid", process.Process.Pid))
+				err := process.Process.Kill()
+				if err != nil {
+					log.Debug("Terminating blocking failed", zap.Int("pid", process.Process.Pid), zap.Error(err))
+				}
 				return
 			}
 		}
@@ -129,54 +132,55 @@ func (c *Command) RunBlockingNonFatal(ctx context.Context) {
 func (c *Command) Run(ctx context.Context) {
 	// Register chan to receive system signals
 	wg.Add(1)
-	go func(command, runAs string, ctx context.Context) {
-
-		defer wg.Done()
-		args := strings.Split(command, " ")
-		process := exec.Command(args[0], args[1:]...)
-		process.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-
-		if runAs != "" {
-			currentUser, err := user.Lookup(runAs)
-			if err != nil {
-				log.Fatal(
-					"Failed getting user",
-					zap.String("run_as", runAs),
-					zap.String("cmd", command),
-					zap.Error(err),
-				)
-			}
-			c.user = currentUser.Username
-			c.uid, _ = strconv.Atoi(currentUser.Uid)
-			c.gid, _ = strconv.Atoi(currentUser.Gid)
-			process.SysProcAttr.Credential = &syscall.Credential{Uid: uint32(c.uid), Gid: uint32(c.gid)}
+	args := strings.Split(c.Command, " ")
+	process := exec.Command(args[0], args[1:]...)
+	process.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	if c.RunAs != "" {
+		currentUser, err := user.Lookup(c.RunAs)
+		if err != nil {
+			log.Fatal(
+				"Failed getting user",
+				zap.String("run_as", c.RunAs),
+				zap.String("cmd", c.Command),
+				zap.Error(err),
+			)
 		}
+		c.user = currentUser.Username
+		c.uid, _ = strconv.Atoi(currentUser.Uid)
+		c.gid, _ = strconv.Atoi(currentUser.Gid)
+		process.SysProcAttr.Credential = &syscall.Credential{Uid: uint32(c.uid), Gid: uint32(c.gid)}
+	}
+	process.Stdout = logger{"stdout", c.Command}
+	process.Stderr = logger{"stderr", c.Command}
+	process.Stdin = nil
 
-		process.Stdout = logger{"stdout", command}
-		process.Stderr = logger{"stderr", command}
-		process.Stdin = nil
-		log.Debug("Starting", zap.Strings("args", args), zap.String("user", c.user))
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				// Done returns a channel that's closed when work done on behalf of this context is canceled
+				log.Debug("Terminating forked", zap.Int("pid", process.Process.Pid), zap.String("cmd", c.Command))
+				err := process.Process.Kill()
+				if err != nil {
+					log.Debug("Terminating forked failed", zap.Int("pid", process.Process.Pid), zap.Error(err))
+				}
+				return
+			}
+		}
+	}()
+
+	go func() {
+		log.Info("Starting forked", zap.Strings("args", args), zap.String("user", c.user))
 
 		// start the process
 		err := process.Start()
 		if err != nil {
 			log.Error(
 				"Failed starting command",
-				zap.String("cmd", command),
+				zap.String("cmd", c.Command),
 				zap.Error(err),
 			)
 		}
-
-		go func() {
-			for {
-				select {
-				case <-ctx.Done(): // Done returns a channel that's closed when work done on behalf of this context is canceled
-					log.Debug("Terminating", zap.Int("pid", process.Process.Pid), zap.String("cmd", c.Command))
-					process.Process.Kill()
-					return
-				}
-			}
-		}()
 
 		err = process.Wait()
 		if err != nil {
@@ -186,6 +190,6 @@ func (c *Command) Run(ctx context.Context) {
 				zap.Error(err),
 			)
 		}
-
-	}(c.Command, c.RunAs, ctx)
+		wg.Done()
+	}()
 }

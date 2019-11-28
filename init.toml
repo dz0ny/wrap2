@@ -3,15 +3,15 @@
   user = "www-data"
 
 [[process]]
-  cmd = "sleep 30"
+  cmd = "sleep 10"
   user = "www-data"
 
 [[process]]
-  cmd = "sleep 35"
+  cmd = "sleep 15"
   user = "dz0ny"
 
 [post_start]
-  cmd = "sleep 13"
+  cmd = "sleep 4"
   user = "www-data"
 
 [[cron]]
@@ -23,5 +23,5 @@
 [[cron]]
   schedule = "@every 6s"
   [cron.job]
-    cmd = "bash -c 'exit 1'"
+    cmd = "sh -c 'exit'"
     user = "www-data"

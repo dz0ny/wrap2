@@ -12,7 +12,7 @@ var tmpl = "ENV var example custom\n"
 
 func TestDefaultTemplate(t *testing.T) {
 	tm := Template{
-		Source: "../../fixtures/in.tmpl",
+		Source: "fixtures/in.tmpl",
 		Target: "/tmp/target.tmpl",
 	}
 	os.Setenv("CUSTOM", "custom")

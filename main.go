@@ -10,9 +10,9 @@ import (
 
 	"github.com/dz0ny/wrap2/version"
 	"github.com/hashicorp/go-reap"
+	"github.com/robfig/cron"
 
 	"github.com/jinzhu/copier"
-	"github.com/robfig/cron"
 	"go.uber.org/zap"
 )
 
@@ -36,18 +36,19 @@ func main() {
 	if showVersion {
 		os.Exit(0)
 	}
-
+	cronRunner := cron.New()
 	ctx, cancel := context.WithCancel(context.Background())
 	pids := make(reap.PidCh, 1)
 	errors := make(reap.ErrorCh, 1)
-	done := make(chan struct{})
-	mainHandler := make(chan os.Signal, 1)
-	signal.Notify(mainHandler, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGKILL)
+	done := make(chan struct{}, 1)
+	mainHandler := make(chan os.Signal)
+	signal.Notify(mainHandler, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 
 	go func() {
 		sig := <-mainHandler
 		log.Info("Main interrupt done, canceling workers", zap.String("received", sig.String()))
 		cancel()
+		cronRunner.Stop()
 		done <- struct{}{}
 	}()
 
@@ -58,15 +59,12 @@ func main() {
 				log.Debug("Reaped child process", zap.Int("pid", pid))
 			case err := <-errors:
 				log.Error("Error reaping child process", zap.Error(err))
-			case <-done:
-				return
 			}
 		}
 	}()
 
 	go reap.ReapChildren(pids, errors, done, nil)
 
-	cronRunner := cron.New()
 	config := NewConfig(configLocation)
 	if config.PreStart.Command != "" {
 		config.PreStart.RunBlocking(false, ctx)
@@ -74,7 +72,10 @@ func main() {
 
 	for _, job := range config.Cron {
 		cj := Cron{}
-		copier.Copy(&cj, &job)
+		err := copier.Copy(&cj, &job)
+		if err != nil {
+			log.Fatal("Chmod failed", zap.Error(err))
+		}
 		log.Info(
 			"Scheduling cron",
 			zap.String("cmd", cj.Command.Command),
@@ -96,7 +97,8 @@ func main() {
 		}
 	}
 
-	for _, proc := range config.Process {
+	for idx := range config.Process {
+		proc := config.Process[idx]
 		if proc.Template.Source != "" && proc.Template.Target != "" {
 			log.Info(
 				"Parsing",

@@ -4,14 +4,14 @@ import (
 	"crypto/sha1"
 	"errors"
 	"fmt"
+	"github.com/Masterminds/sprig"
+	"go.uber.org/zap"
 	"html/template"
 	"io"
 	"io/ioutil"
 	"os"
 	"path"
 	"strings"
-
-	"go.uber.org/zap"
 )
 
 // Template holds information about processing
@@ -63,7 +63,7 @@ func (t *Template) Process() error {
 		"env":     os.Getenv,
 		"k8s":     secret,
 		"sha1":    sha,
-	}).Parse(string(data))
+	}).Funcs(sprig.FuncMap()).Parse(string(data))
 
 	if err != nil {
 		return err
