@@ -10,6 +10,14 @@
   cmd = "sleep 15"
   user = "dz0ny"
 
+[[process]]
+  cmd = "sleep 33"
+  user = "dz0ny"
+  [process.enabled]
+    operator="EnvEqual"
+    key= "PHP_RUNTIME"
+    value="php73"
+
 [post_start]
   cmd = "sleep 4"
   user = "www-data"

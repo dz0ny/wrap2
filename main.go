@@ -105,7 +105,19 @@ func main() {
 
 	for idx := range config.Process {
 		proc := config.Process[idx]
-		if proc.Template.Source != "" && proc.Template.Target != "" {
+		log.Info(
+			"Command enabler",
+			zap.Bool("isActive", proc.Enabled.IsActive()),
+			zap.String("operator", proc.Enabled.Operator),
+		)
+		if proc.Enabled.IsActive() && !proc.Enabled.IsTrue() {
+			log.Info(
+				"Command not enabled",
+				zap.String("cmd", proc.Command),
+			)
+			continue
+		}
+		if proc.Template.Enabled() {
 			log.Info(
 				"Parsing",
 				zap.String("src", proc.Template.Source),

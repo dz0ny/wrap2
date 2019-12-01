@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/k0kubun/pp"
 	"github.com/pelletier/go-toml"
 	"go.uber.org/zap"
 )
@@ -31,6 +32,10 @@ func NewConfig(path string) *Config {
 
 	if err = toml.Unmarshal(data, c); err != nil {
 		log.Fatal("Config cannot be parsed", zap.Error(err))
+	}
+
+	if showDebug {
+		pp.Println(c)
 	}
 
 	return c

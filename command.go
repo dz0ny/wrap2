@@ -17,6 +17,7 @@ type Command struct {
 	Command  string   `toml:"cmd"`
 	Template Template `toml:"config, omitempty"`
 	RunAs    string   `toml:"user, omitempty"`
+	Enabled  Enabler  `toml:"enabled, omitempty"`
 	uid      int
 	gid      int
 	user     string

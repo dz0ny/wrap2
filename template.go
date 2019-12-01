@@ -42,6 +42,11 @@ func sha(value string) string {
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
+// Enabled returns true if templates are enabled
+func (t *Template) Enabled() bool {
+	return t.Source != "" && t.Target != ""
+}
+
 // Process creates out file from src template
 func (t *Template) Process() error {
 	if t.Source != "" {
