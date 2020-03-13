@@ -36,7 +36,7 @@ func (l logger) Write(data []byte) (int, error) {
 	}
 
 	// wrap in json otherwise
-	log.Debug(
+	log.Warn(
 		string(data),
 		zap.String("kind", l.Kind),
 		zap.String("cmd", l.Command),
