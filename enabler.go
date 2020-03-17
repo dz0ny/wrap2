@@ -1,8 +1,9 @@
 package main
 
-import "fmt"
-
-import "os"
+import (
+	"fmt"
+	"os"
+)
 
 type Enabler struct {
 	Key      string `toml:"key"`
@@ -14,6 +15,9 @@ type Enabler struct {
 func (t *Enabler) IsTrue() bool {
 	if t.Operator == "EnvEqual" {
 		return os.Getenv(t.Key) == t.Value
+	}
+	if t.Operator == "EnvNotEqual" {
+		return os.Getenv(t.Key) != t.Value
 	}
 	panic(fmt.Errorf("Unsupported operator %s ", t.Operator))
 }
