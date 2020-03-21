@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"os"
 	"os/exec"
 	"os/user"
@@ -110,14 +111,14 @@ func (c *Command) RunBlocking(fatal bool, ctx context.Context) {
 				zap.Error(err),
 			)
 		} else {
-			log.Debug(
+			log.Info(
 				"Process terminated",
 				zap.String("cmd", c.Command),
 				zap.Error(err),
 			)
 		}
 	} else {
-		log.Debug(
+		log.Info(
 			"Process ended",
 			zap.String("cmd", c.Command),
 		)
@@ -130,9 +131,11 @@ func (c *Command) RunBlockingNonFatal(ctx context.Context) {
 }
 
 // Run executes process and redirects pipes
-func (c *Command) Run(ctx context.Context) {
+func (c *Command) Run(ctx context.Context, doRestart bool) {
 	// Register chan to receive system signals
-	wg.Add(1)
+	if !doRestart {
+		wg.Add(1)
+	}
 	args := strings.Split(c.Command, " ")
 	process := exec.Command(args[0], args[1:]...)
 	process.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
@@ -155,17 +158,24 @@ func (c *Command) Run(ctx context.Context) {
 	process.Stderr = logger{"stderr", c.Command}
 	process.Stdin = nil
 
-	go func() {
+	go func(pc *exec.Cmd) {
 		<-ctx.Done()
 		// Done returns a channel that's closed when work done on behalf of this context is canceled
-		log.Debug("Terminating forked", zap.Int("pid", process.Process.Pid), zap.String("cmd", c.Command))
-		err := process.Process.Kill()
-		if err != nil {
-			log.Debug("Terminating forked failed", zap.Int("pid", process.Process.Pid), zap.Error(err))
+		log.Debug("Terminating forked", zap.String("cmd", c.Command))
+		if pc == nil {
+			return
 		}
-	}()
+		if pc.Process == nil {
+			return
+		}
+		err := pc.Process.Kill()
+		if err != nil {
+			log.Debug("Terminating forked failed", zap.Error(err))
+		}
+	}(process)
 
 	go func() {
+
 		log.Info("Starting forked", zap.Strings("args", args), zap.String("user", c.user))
 
 		// start the process
@@ -177,15 +187,29 @@ func (c *Command) Run(ctx context.Context) {
 				zap.Error(err),
 			)
 		}
-
+		restartProcess := false
 		err = process.Wait()
 		if err != nil {
-			log.Debug(
+			// if proccess crashed context.Canceled will be nil
+			// if we got signal to finnish the work cty will be in context.Canceled error state
+			restartProcess = !errors.Is(ctx.Err(), context.Canceled)
+			log.Info(
 				"Process terminated",
 				zap.String("cmd", c.Command),
+				zap.Error(ctx.Err()),
 				zap.Error(err),
 			)
 		}
-		wg.Done()
+
+		if restartProcess {
+			log.Info(
+				"Process gonna restart",
+				zap.String("cmd", c.Command),
+			)
+			go c.Run(ctx, true)
+		} else {
+			wg.Done()
+		}
+
 	}()
 }

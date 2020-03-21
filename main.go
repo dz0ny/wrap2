@@ -133,7 +133,7 @@ func main() {
 			}
 		}
 
-		proc.Run(ctx)
+		proc.Run(ctx, false)
 	}
 
 	if config.PostStart.Command != "" {
