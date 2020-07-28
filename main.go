@@ -80,7 +80,16 @@ func main() {
 		cj := Cron{}
 		err := copier.Copy(&cj, &job)
 		if err != nil {
-			log.Fatal("Chmod failed", zap.Error(err))
+			log.Fatal("Failed", zap.Error(err))
+		}
+		if cj.Enabled.IsActive() && !cj.Enabled.IsTrue() {
+			log.Info(
+				"Skipping cron",
+				zap.String("cmd", cj.Command.Command),
+				zap.Bool("enabled", cj.Enabled.IsTrue()),
+				zap.String("schedule", cj.Schedule),
+			)
+			continue
 		}
 		log.Info(
 			"Scheduling cron",

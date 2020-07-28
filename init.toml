@@ -27,7 +27,10 @@
   [cron.job]
     cmd = "echo tick5"
     user = "www-data"
-
+    [cron.job.enabled]
+      operator="EnvEqual"
+      key= "PHP_RUNTIME"
+      value="php73"
 [[cron]]
   schedule = "@every 6s"
   [cron.job]
