@@ -72,6 +72,18 @@ Secret var example {{k8s "secret"}}
   [process.config]
     src = "source.tmpl"
     out = "target.tmpl"
+   [process.enabled]
+     operator="EnvNotEqual"
+     # EnvEqual > env variable matches value
+     # EnvNotEqual > env variable does not match value
+
+     # EnvNotEndsWith > env variable does not end with value
+     # EnvEndsWith > env variable ends with value
+
+     # EnvNotStartsWith > env variable does not start with value
+     # EnvStartsWith > env variable starts with value
+     key= "KIND"
+     value="scaled"
 
 [[process]]
   cmd = "true -v"

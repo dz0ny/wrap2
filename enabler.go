@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 )
 
 type Enabler struct {
@@ -18,6 +19,18 @@ func (t *Enabler) IsTrue() bool {
 	}
 	if t.Operator == "EnvNotEqual" {
 		return os.Getenv(t.Key) != t.Value
+	}
+	if t.Operator == "EnvNotEndsWith" {
+		return !strings.HasSuffix(os.Getenv(t.Key), t.Value)
+	}
+	if t.Operator == "EnvEndsWith" {
+		return strings.HasSuffix(os.Getenv(t.Key), t.Value)
+	}
+	if t.Operator == "EnvNotStartsWith" {
+		return !strings.HasPrefix(os.Getenv(t.Key), t.Value)
+	}
+	if t.Operator == "EnvStartsWith" {
+		return strings.HasPrefix(os.Getenv(t.Key), t.Value)
 	}
 	panic(fmt.Errorf("Unsupported operator %s ", t.Operator))
 }
