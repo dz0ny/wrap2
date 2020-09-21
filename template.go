@@ -4,14 +4,15 @@ import (
 	"crypto/sha1"
 	"errors"
 	"fmt"
-	"github.com/Masterminds/sprig"
-	"go.uber.org/zap"
 	"html/template"
 	"io"
 	"io/ioutil"
 	"os"
 	"path"
 	"strings"
+
+	"github.com/Masterminds/sprig"
+	"go.uber.org/zap"
 )
 
 // Template holds information about processing
@@ -42,6 +43,13 @@ func sha(value string) string {
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
+func pathExists(path string) bool {
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		return true
+	}
+	return false
+}
+
 // Enabled returns true if templates are enabled
 func (t *Template) Enabled() bool {
 	return t.Source != "" && t.Target != ""
@@ -62,12 +70,13 @@ func (t *Template) Process() error {
 		return err
 	}
 	tmpl, err := template.New(t.Source).Funcs(template.FuncMap{
-		"replace": strings.Replace,
-		"lower":   strings.ToLower,
-		"upper":   strings.ToUpper,
-		"env":     os.Getenv,
-		"k8s":     secret,
-		"sha1":    sha,
+		"replace":    strings.Replace,
+		"lower":      strings.ToLower,
+		"upper":      strings.ToUpper,
+		"pathExists": pathExists,
+		"env":        os.Getenv,
+		"k8s":        secret,
+		"sha1":       sha,
 	}).Funcs(sprig.FuncMap()).Parse(string(data))
 
 	if err != nil {
