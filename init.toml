@@ -36,3 +36,4 @@
   [cron.job]
     cmd = "sh -c 'exit'"
     user = "www-data"
+    safeEnv= true

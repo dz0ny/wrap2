@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"os/user"
@@ -19,6 +20,7 @@ type Command struct {
 	Template Template `toml:"config, omitempty"`
 	RunAs    string   `toml:"user, omitempty"`
 	Enabled  Enabler  `toml:"enabled, omitempty"`
+	SafeEnv  bool     `toml:"safeEnv, omitempty"`
 	uid      int
 	gid      int
 	user     string
@@ -46,12 +48,23 @@ func (l logger) Write(data []byte) (int, error) {
 }
 
 // RunBlocking runs command in blocking mode
-func (c *Command) RunBlocking(fatal bool, ctx context.Context) {
+func (c *Command) RunBlocking(fatal bool, stripEnv bool, ctx context.Context) {
 
 	args := strings.Split(c.Command, " ")
 	process := exec.Command(args[0], args[1:]...)
 	process.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
+	if stripEnv {
+		process.Env = []string{
+			fmt.Sprintf("HOST=%s", os.Getenv("HOST")),
+			fmt.Sprintf("PATH=%s", os.Getenv("PATH")),
+			fmt.Sprintf("EDITOR=%s", os.Getenv("EDITOR")),
+			fmt.Sprintf("SHELL=%s", os.Getenv("SHELL")),
+			fmt.Sprintf("TERM=%s", os.Getenv("TERM")),
+			fmt.Sprintf("TMP=%s", os.Getenv("TMP")),
+			fmt.Sprintf("TEMP=%s", os.Getenv("TEMP")),
+		}
+	}
 	if c.RunAs != "" {
 		currentUser, err := user.Lookup(c.RunAs)
 		if err != nil {
@@ -127,7 +140,12 @@ func (c *Command) RunBlocking(fatal bool, ctx context.Context) {
 
 // RunBlockingNonFatal runs command in blocking mode
 func (c *Command) RunBlockingNonFatal(ctx context.Context) {
-	c.RunBlocking(false, ctx)
+	c.RunBlocking(false, false, ctx)
+}
+
+// RunBlockingNonFatalSafeEnv runs command in blocking mode with non essential env variables stripped
+func (c *Command) RunBlockingNonFatalSafeEnv(ctx context.Context) {
+	c.RunBlocking(false, true, ctx)
 }
 
 // Run executes process and redirects pipes
