@@ -154,6 +154,23 @@ func (c *Command) Run(ctx context.Context, doRestart bool) {
 	if !doRestart {
 		wg.Add(1)
 	}
+
+	if c.Template.Enabled() {
+		log.Info(
+			"Parsing",
+			zap.String("src", c.Template.Source),
+			zap.String("dst", c.Template.Target),
+		)
+		if err := c.Template.Process(); err != nil {
+			log.Fatal(
+				"template parsing failed",
+				zap.String("src", c.Template.Source),
+				zap.String("dst", c.Template.Target),
+				zap.Error(err),
+			)
+		}
+	}
+
 	args := strings.Split(c.Command, " ")
 	process := exec.Command(args[0], args[1:]...)
 	process.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}

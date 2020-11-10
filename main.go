@@ -134,21 +134,6 @@ func main() {
 			)
 			continue
 		}
-		if proc.Template.Enabled() {
-			log.Info(
-				"Parsing",
-				zap.String("src", proc.Template.Source),
-				zap.String("dst", proc.Template.Target),
-			)
-			if err := proc.Template.Process(); err != nil {
-				log.Fatal(
-					"template parsing failed",
-					zap.String("src", proc.Template.Source),
-					zap.String("dst", proc.Template.Target),
-					zap.Error(err),
-				)
-			}
-		}
 
 		proc.Run(ctx, false)
 	}
