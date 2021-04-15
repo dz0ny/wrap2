@@ -50,6 +50,13 @@ func pathExists(path string) bool {
 	return false
 }
 
+func pathInclude(path string) string {
+	if data, err := os.ReadFile(path); err == nil {
+		return string(data)
+	}
+	return ""
+}
+
 // Enabled returns true if templates are enabled
 func (t *Template) Enabled() bool {
 	return t.Source != "" && t.Target != ""
@@ -74,6 +81,7 @@ func (t *Template) Process() error {
 		"lower":      strings.ToLower,
 		"upper":      strings.ToUpper,
 		"pathExists": pathExists,
+		"include":    pathInclude,
 		"env":        os.Getenv,
 		"k8s":        secret,
 		"sha1":       sha,
